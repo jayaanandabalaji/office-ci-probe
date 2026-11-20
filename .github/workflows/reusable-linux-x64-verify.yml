@@ -14,6 +14,9 @@ on:
       binary: {type: string, required: true}
       window_title: {type: string, default: ''}
       artifact_name: {type: string, default: 'linux-x64-bundle'}
+      repository: {type: string, default: ''}
+    secrets:
+      app_repo_token: {required: false}
   workflow_dispatch:
     inputs:
       app_dir: {type: string, default: 'probe_app'}
@@ -36,6 +39,9 @@ jobs:
     steps:
       - name: Check out the app
         uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repository != '' && inputs.repository || github.repository }}
+          token: ${{ secrets.app_repo_token != '' && secrets.app_repo_token || github.token }}
 
       - name: Install Flutter
         uses: subosito/flutter-action@v2

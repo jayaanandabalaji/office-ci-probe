@@ -1,0 +1,113 @@
+# Verifies the Office suite's Linux desktop builds on a native x86_64 runner.
+#
+# The app repositories are private, so this workflow checks them out with a
+# token stored as the repository secret APP_REPO_TOKEN. Give that token read
+# access to the repositories below and nothing else.
+#
+# The minutes a job uses are billed to the repository that owns the workflow,
+# which for this repository is public, so this path does not need private
+# Actions minutes.
+name: Linux x86_64 verify (private apps)
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Weekly, so a change in the shared recipe is caught on every app.
+    - cron: '17 5 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: ${{ matrix.app }}
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          - app: office_one
+            app_dir: '.'
+            binary: office_one
+            window_title: Office One
+          - app: office_mail
+            app_dir: 'app'
+            binary: office_mail
+            window_title: Office Mail
+          - app: office_document_editor
+            app_dir: 'app'
+            binary: office_docs
+            window_title: Office Docs
+          - app: office_sheet_editor
+            app_dir: 'app'
+            binary: office_sheets
+            window_title: Office Sheets
+          - app: office_presentation_editor
+            app_dir: 'app'
+            binary: office_slides
+            window_title: Office Slides
+          - app: office_pdf_editor
+            app_dir: 'app'
+            binary: office_pdf
+            window_title: Office PDF
+          - app: office_sign
+            app_dir: 'app'
+            binary: office_sign
+            window_title: Office Sign
+          - app: office_drive
+            app_dir: 'app'
+            binary: office_drive
+            window_title: Office Drive
+          - app: office_crm
+            app_dir: 'app'
+            binary: office_crm
+            window_title: Office CRM
+          - app: office_desk
+            app_dir: 'app'
+            binary: office_desk
+            window_title: Office Desk
+          - app: office_books
+            app_dir: 'app'
+            binary: office_books
+            window_title: Office Books
+          - app: office_hrms
+            app_dir: 'app'
+            binary: office_people
+            window_title: Office People
+          - app: office_payroll
+            app_dir: 'app'
+            binary: office_payroll
+            window_title: Office Payroll
+          - app: office_meeting
+            app_dir: 'app'
+            binary: office_meeting
+            window_title: Office Meeting
+          - app: office_team_chat
+            app_dir: 'app'
+            binary: office_chat
+            window_title: Office Chat
+          - app: office_analytics
+            app_dir: 'app'
+            binary: office_analytics
+            window_title: Office Analytics
+          - app: office_single_auth
+            app_dir: 'app'
+            binary: office_accounts
+            window_title: Office Accounts
+          - app: office_ai_interface
+            app_dir: 'app'
+            binary: office_ai
+            window_title: Office AI
+          - app: office_vault
+            app_dir: 'app'
+            binary: office_vault
+            window_title: Office Vault
+    uses: ./.github/workflows/reusable-linux-x64-verify.yml
+    with:
+      app_dir: ${{ matrix.app_dir }}
+      binary: ${{ matrix.binary }}
+      window_title: ${{ matrix.window_title }}
+      artifact_name: ${{ matrix.app }}-linux-x64
+      repository: jayaanandabalaji/${{ matrix.app }}
+    secrets:
+      app_repo_token: ${{ secrets.APP_REPO_TOKEN }}
