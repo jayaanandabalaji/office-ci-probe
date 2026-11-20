@@ -30,9 +30,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      APP_DIR: ''${{ inputs.app_dir }}''
-      BINARY: ''${{ inputs.binary }}''
-      WINDOW_TITLE: ''${{ inputs.window_title }}''
+      APP_DIR: '${{ inputs.app_dir }}'
+      BINARY: '${{ inputs.binary }}'
+      WINDOW_TITLE: '${{ inputs.window_title }}'
     steps:
       - name: Check out the app
         uses: actions/checkout@v4
@@ -122,7 +122,7 @@ jobs:
       - name: Upload the x86_64 bundle
         uses: actions/upload-artifact@v4
         with:
-          name: ''${{ inputs.artifact_name }}''
+          name: '${{ inputs.artifact_name }}'
           path: ${{ inputs.app_dir == '.' && github.workspace || format('{0}/{1}', github.workspace, inputs.app_dir) }}/build/linux/x64/release/bundle
           retention-days: 14
 
@@ -130,6 +130,6 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ''${{ inputs.artifact_name }}'-screenshot'
+          name: '${{ inputs.artifact_name }}-screenshot'
           path: ${{ inputs.app_dir == '.' && github.workspace || format('{0}/{1}', github.workspace, inputs.app_dir) }}/verification
           retention-days: 14
