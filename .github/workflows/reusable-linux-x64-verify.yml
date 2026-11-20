@@ -55,7 +55,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev \
-            libstdc++-12-dev libgl1 libglu1-mesa \
+            libstdc++-12-dev libgl1 libglu1-mesa zlib1g-dev \
+            libsecret-1-dev libjsoncpp-dev libjson-glib-2.0-dev \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+            libbluetooth-dev libsoup-2.4-dev libcurl4-openssl-dev \
+            libsqlite3-dev libnotify-dev \
             xvfb openbox x11-utils xdotool ffmpeg imagemagick
 
       - name: Authorise git for the private package repositories
