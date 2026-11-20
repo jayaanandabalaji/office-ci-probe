@@ -1,0 +1,132 @@
+# Verifies this app's Linux desktop build on a native x86_64 runner.
+#
+# The runner is ubuntu-latest, so `flutter build linux` produces a genuine
+# x86_64 bundle. The job then launches that bundle under Xvfb with software
+# rendering, waits for the GTK window to map, and captures a screenshot, so a
+# broken renderer or a missing shared library fails the job instead of
+# shipping.
+name: Linux x86_64 verify
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'probe_app/**'
+      - 'packages/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - '.github/workflows/linux-x64-verify.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Build and launch on x86_64
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      APP_DIR: 'probe_app'
+      BINARY: 'ci_probe'
+      WINDOW_TITLE: 'ci_probe'
+    steps:
+      - name: Check out the app
+        uses: actions/checkout@v4
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.9'
+          channel: stable
+          cache: true
+
+      - name: Install the Linux desktop toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev \
+            libstdc++-12-dev libgl1 libglu1-mesa \
+            xvfb openbox x11-utils xdotool ffmpeg imagemagick
+
+      - name: Fetch the packages
+        working-directory: ${{ github.workspace }}/probe_app
+        run: flutter pub get
+
+      - name: Build the Linux release bundle
+        working-directory: ${{ github.workspace }}/probe_app
+        run: flutter build linux --release
+
+      - name: Confirm the bundle is an x86_64 build
+        working-directory: ${{ github.workspace }}/probe_app
+        run: |
+          set -euo pipefail
+          binary="build/linux/x64/release/bundle/$BINARY"
+          test -x "$binary"
+          file "$binary" | tee bundle-type.txt
+          grep -q 'x86-64' bundle-type.txt
+
+      - name: Launch the bundle headlessly and capture the screen
+        working-directory: ${{ github.workspace }}/probe_app
+        run: |
+          set -euo pipefail
+          bundle="build/linux/x64/release/bundle"
+          export DISPLAY=:99
+          Xvfb :99 -screen 0 1440x900x24 >/tmp/xvfb.log 2>&1 &
+          sleep 2
+          openbox --sm-disable >/tmp/openbox.log 2>&1 &
+          sleep 2
+          export FLUTTER_ENGINE_SWITCHES=2
+          export FLUTTER_ENGINE_SWITCH_1=enable-software-rendering=true
+          export FLUTTER_ENGINE_SWITCH_2=enable-impeller=false
+          ( cd "$bundle" && exec "./$BINARY" ) >/tmp/app.log 2>&1 &
+          app_pid=$!
+          window=""
+          for _ in $(seq 1 90); do
+            if ! kill -0 "$app_pid" 2>/dev/null; then
+              echo "the app exited before it drew a window" >&2
+              cat /tmp/app.log >&2
+              exit 1
+            fi
+            if [ -n "$WINDOW_TITLE" ]; then
+              window=$(xdotool search --onlyvisible --name "$WINDOW_TITLE" 2>/dev/null | head -1 || true)
+            else
+              window=$(xdotool search --onlyvisible --name '.' 2>/dev/null | head -1 || true)
+            fi
+            [ -n "$window" ] && break
+            sleep 2
+          done
+          if [ -z "$window" ]; then
+            echo "no window appeared for the app" >&2
+            xwininfo -root -tree >&2 || true
+            cat /tmp/app.log >&2
+            exit 1
+          fi
+          echo "window=$window title=$(xdotool getwindowname "$window")"
+          xdotool windowactivate "$window" || true
+          sleep 4
+          mkdir -p verification
+          ffmpeg -y -loglevel error -f x11grab -video_size 1440x900 -i :99 -frames:v 1 \
+            "verification/${BINARY}-signin.png"
+          identify -format 'colors=%k mean=%[fx:mean]\n' "verification/${BINARY}-signin.png" | tee verification/image-stats.txt
+          colors=$(sed -n 's/.*colors=\([0-9]*\).*/\1/p' verification/image-stats.txt)
+          if [ "${colors:-0}" -lt 20 ]; then
+            echo "the window rendered a blank screen" >&2
+            exit 1
+          fi
+          kill "$app_pid" 2>/dev/null || true
+
+      - name: Upload the x86_64 bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: 'ci-probe-linux-x64'
+          path: ${{ github.workspace }}/probe_app/build/linux/x64/release/bundle
+          retention-days: 14
+
+      - name: Upload the verification screenshot
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: 'ci-probe-linux-x64-screenshot'
+          path: ${{ github.workspace }}/probe_app/verification
+          retention-days: 14
