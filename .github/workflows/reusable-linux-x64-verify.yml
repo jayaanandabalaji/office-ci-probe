@@ -125,6 +125,9 @@ jobs:
           gnome-keyring-daemon --start --foreground --components=secrets >/tmp/keyring.log 2>&1 &
           sleep 3
           printf 'audit\n' | gnome-keyring-daemon --unlock >/dev/null 2>&1 || true
+          # Unlocking a fresh keyring leaves it without the default collection,
+          # which the apps look for; storing one creates it.
+          printf 'bootstrap' | secret-tool store --label='linux audit bootstrap' audit bootstrap >/dev/null 2>&1 || true
           Xvfb :99 -screen 0 1440x900x24 >/tmp/xvfb.log 2>&1 &
           sleep 2
           openbox --sm-disable >/tmp/openbox.log 2>&1 &
