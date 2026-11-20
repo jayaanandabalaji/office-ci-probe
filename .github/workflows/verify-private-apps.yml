@@ -11,9 +11,6 @@ name: Linux x86_64 verify (private apps)
 
 on:
   workflow_dispatch:
-  schedule:
-    # Weekly, so a change in the shared recipe is caught on every app.
-    - cron: '17 5 * * 1'
 
 permissions:
   contents: read
