@@ -30,7 +30,7 @@ permissions:
 jobs:
   verify:
     name: Build and launch on x86_64
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
       APP_DIR: '${{ inputs.app_dir }}'
