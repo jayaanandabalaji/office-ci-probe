@@ -58,6 +58,15 @@ jobs:
             libstdc++-12-dev libgl1 libglu1-mesa \
             xvfb openbox x11-utils xdotool ffmpeg imagemagick
 
+      - name: Authorise git for the private package repositories
+        env:
+          PACKAGE_TOKEN: ${{ secrets.app_repo_token != '' && secrets.app_repo_token || secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # The apps depend on private packages that are fetched by URL, so the
+          # clone needs credentials of its own.
+          git config --global url."https://x-access-token:${PACKAGE_TOKEN}@github.com/".insteadOf "https://github.com/"
+
       - name: Fetch the packages
         working-directory: ${{ inputs.app_dir == '.' && github.workspace || format('{0}/{1}', github.workspace, inputs.app_dir) }}
         run: flutter pub get
