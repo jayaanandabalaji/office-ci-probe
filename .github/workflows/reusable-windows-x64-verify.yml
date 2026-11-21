@@ -88,7 +88,7 @@ jobs:
         with:
           repository: ${{ inputs.repository != '' && inputs.repository || github.repository }}
           token: ${{ secrets.app_repo_token != '' && secrets.app_repo_token || github.token }}
-          persist-credentials: true
+          persist-credentials: false
 
       - name: Install Flutter
         uses: subosito/flutter-action@v2
