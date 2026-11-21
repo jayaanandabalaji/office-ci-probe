@@ -15,7 +15,7 @@ $env:APP_STATUS_CHECKS = 'false'
 $env:NODE_ENV = 'development'
 $env:DATABASE_URL = 'postgresql://postgres:root@127.0.0.1:5432/office_one_test'
 Pop-Location
-Push-Location "$env:GITHUB_WORKSPACE\app"
+Push-Location "$env:GITHUB_WORKSPACE"
 $shotDir = Join-Path $env:GITHUB_WORKSPACE 'verification'
 New-Item -ItemType Directory -Force -Path $shotDir | Out-Null
 $shot = Join-Path $shotDir 'dashboard.png'
