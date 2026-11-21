@@ -97,6 +97,13 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Authorise git for the private package repositories
+        shell: pwsh
+        env:
+          PACKAGE_TOKEN: ${{ secrets.app_repo_token != '' && secrets.app_repo_token || github.token }}
+        run: |
+          git config --global url."https://x-access-token:${env:PACKAGE_TOKEN}@github.com/".insteadOf "https://github.com/"
+
       - name: Regenerate the Windows runner when needed
         if: ${{ inputs.regenerate_windows }}
         shell: pwsh
@@ -106,13 +113,6 @@ jobs:
           flutter config --enable-windows-desktop
           flutter create --platforms=windows .
           Pop-Location
-
-      - name: Authorise git for the private package repositories
-        shell: pwsh
-        env:
-          PACKAGE_TOKEN: ${{ secrets.app_repo_token != '' && secrets.app_repo_token || github.token }}
-        run: |
-          git config --global url."https://x-access-token:${env:PACKAGE_TOKEN}@github.com/".insteadOf "https://github.com/"
 
       - name: Fetch the packages
         shell: pwsh
