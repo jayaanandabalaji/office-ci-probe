@@ -218,13 +218,17 @@ jobs:
           if-no-files-found: ignore
 
       - name: Deploy the binary to the Office One downloads directory
-        if: ${{ inputs.deploy_slug != '' && secrets.deploy_ssh_key != '' }}
+        if: ${{ inputs.deploy_slug != '' }}
         shell: pwsh
         env:
           DEPLOY_KEY: ${{ secrets.deploy_ssh_key }}
           DEPLOY_SLUG: '${{ inputs.deploy_slug }}'
           ARTIFACT_NAME: '${{ inputs.artifact_name }}'
         run: |
+          if ([string]::IsNullOrWhiteSpace($env:DEPLOY_KEY)) {
+            Write-Host 'No deploy key available; skipping deployment.'
+            exit 0
+          }
           $ErrorActionPreference = 'Stop'
           $keyDir = Join-Path $env:USERPROFILE '.ssh'
           New-Item -ItemType Directory -Force -Path $keyDir | Out-Null
