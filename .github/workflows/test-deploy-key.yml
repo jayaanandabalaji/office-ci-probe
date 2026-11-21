@@ -1,0 +1,31 @@
+name: Test deploy key format
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - name: Probe key
+        shell: pwsh
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          Write-Host "length=$($env:DEPLOY_KEY.Length)"
+          $lines = $env:DEPLOY_KEY -split "`n"
+          Write-Host "lines=$($lines.Count)"
+          Write-Host "first=[$($lines[0].Trim())]"
+          Write-Host "last=[$($lines[-1].Trim())]"
+          $hasCR = $env:DEPLOY_KEY.Contains("`r")
+          Write-Host "hasCR=$hasCR"
+          $keyDir = Join-Path $env:USERPROFILE '.ssh'
+          New-Item -ItemType Directory -Force -Path $keyDir | Out-Null
+          $p1 = Join-Path $keyDir 'key_lf'
+          [System.IO.File]::WriteAllText($p1, ($env:DEPLOY_KEY -replace "`r`n","`n"), (New-Object System.Text.UTF8Encoding $false))
+          ssh-keygen -y -f $p1 > $null 2> $null
+          Write-Host "lf_exit=$LASTEXITCODE"
+          $p2 = Join-Path $keyDir 'key_crlf'
+          Set-Content -Path $p2 -Value $env:DEPLOY_KEY -NoNewline
+          ssh-keygen -y -f $p2 > $null 2> $null
+          Write-Host "crlf_exit=$LASTEXITCODE"
