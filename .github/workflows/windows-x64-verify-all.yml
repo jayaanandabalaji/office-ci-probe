@@ -104,6 +104,7 @@ jobs:
             journey_script: 'journeys/books.ps1'
             ref: 'windows-dashboard-ci'
           - app: office_hrms
+            runner: 'windows-2022'
             app_dir: 'app'
             binary: office_people
             window_title: Office People
@@ -139,6 +140,7 @@ jobs:
             journey_script: 'journeys/analytics.ps1'
             ref: 'windows-dashboard-ci'
           - app: office_single_auth
+            runner: 'windows-2022'
             app_dir: 'app'
             binary: office_accounts
             window_title: Office Accounts

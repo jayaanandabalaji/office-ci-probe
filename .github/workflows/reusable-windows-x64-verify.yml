@@ -55,6 +55,10 @@ on:
         description: Branch of the app repository to check out. Empty means the default branch.
         type: string
         default: ''
+      runner:
+        description: Runner image. windows-2022 keeps MSVC 14.3x for plugins that use C++/WinRT.
+        type: string
+        default: 'windows-latest'
     secrets:
       app_repo_token:
         description: Token with read access to the private app and its private packages.
@@ -74,6 +78,7 @@ on:
       journey: {type: string, default: ''}
       regenerate_windows: {type: boolean, default: false}
       ref: {type: string, default: ''}
+      runner: {type: string, default: 'windows-latest'}
 
 permissions:
   contents: read
@@ -81,7 +86,7 @@ permissions:
 jobs:
   verify:
     name: Build and launch on Windows x64
-    runs-on: windows-latest
+    runs-on: ${{ inputs.runner }}
     timeout-minutes: 45
     env:
       APP_DIR: '${{ inputs.app_dir }}'

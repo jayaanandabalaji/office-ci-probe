@@ -48,6 +48,10 @@ on:
         description: Branch of the app repo to build (empty = default branch)
         type: string
         default: ''
+      runner:
+        description: Runner image (windows-latest or windows-2022)
+        type: string
+        default: 'windows-latest'
 
 permissions:
   contents: read
@@ -66,6 +70,7 @@ jobs:
       journey_script: ${{ inputs.journey_script }}
       regenerate_windows: ${{ inputs.regenerate_windows }}
       ref: ${{ inputs.ref }}
+      runner: ${{ inputs.runner }}
     secrets:
       app_repo_token: ${{ secrets.APP_REPO_TOKEN }}
       deploy_ssh_key: ${{ secrets.DEPLOY_SSH_KEY }}
