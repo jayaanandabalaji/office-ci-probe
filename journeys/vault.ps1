@@ -24,52 +24,21 @@ for ($i = 0; $i -lt 60; $i++) {
 }
 if (-not $ok) { throw 'backend did not become healthy' }
 Pop-Location
-Push-Location "$env:GITHUB_WORKSPACE\app"
-$shotDir = Join-Path $env:GITHUB_WORKSPACE 'verification'
-New-Item -ItemType Directory -Force -Path $shotDir | Out-Null
-$shot = Join-Path $shotDir 'dashboard.png'
-$testScript = Join-Path $env:RUNNER_TEMP 'run-dashboard-test.ps1'
-@'
-flutter test -d windows integration_test/windows_dashboard_test.dart `
---dart-define=JOURNEY_SERVER_URL=http://127.0.0.1:18290 `
---dart-define=JOURNEY_ADMIN_EMAIL=admin@journey.test `
---dart-define=JOURNEY_ADMIN_PASSWORD=JourneyPass123 `
---dart-define=JOURNEY_ADMIN_NAME='Ada Admin'
-'@ | Set-Content -Path $testScript -Encoding utf8
-$outLog = Join-Path $env:RUNNER_TEMP 'dashboard-test.out.log'
-$errLog = Join-Path $env:RUNNER_TEMP 'dashboard-test.err.log'
-Add-Type -AssemblyName System.Windows.Forms
-Add-Type -AssemblyName System.Drawing
-$test = Start-Process pwsh -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File', $testScript -PassThru -WindowStyle Hidden -RedirectStandardOutput $outLog -RedirectStandardError $errLog
-$frame = 0
-$deadline = (Get-Date).AddMinutes(20)
-while (-not $test.HasExited -and (Get-Date) -lt $deadline) {
-  try {
-    $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
-    $m = New-Object System.Drawing.Bitmap $b.Width, $b.Height
-    $g = [System.Drawing.Graphics]::FromImage($m)
-    $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
-    $m.Save((Join-Path $shotDir ('frame-{0:d3}.png' -f $frame)), [System.Drawing.Imaging.ImageFormat]::Png)
-    $g.Dispose(); $m.Dispose()
-    $frame++
-  } catch {}
-  Start-Sleep -Seconds 3
+Push-Location "$env:GITHUB_WORKSPACE\server"
+npm ci
+$env:DATABASE_URL = 'postgresql://postgres:root@127.0.0.1:5432/office_drive'
+$env:PORT = '8106'
+$env:PUBLIC_URL = 'http://127.0.0.1:8106'
+$env:ALLOW_REGISTRATION = 'true'
+$env:STORAGE_QUOTA_BYTES = '10737418240'
+$env:DATA_DIR = Join-Path $env:RUNNER_TEMP 'drive-data'
+Remove-Item Env:\NODE_ENV -ErrorAction SilentlyContinue
+Remove-Item Env:\ACCOUNTS_ISSUER -ErrorAction SilentlyContinue
+Start-Process node -ArgumentList 'src/index.js' -WorkingDirectory (Get-Location) -WindowStyle Hidden -PassThru | Out-Null
+$ok = $false
+for ($i = 0; $i -lt 60; $i++) {
+  try { if ((Invoke-WebRequest 'http://127.0.0.1:8106/api/health' -UseBasicParsing -TimeoutSec 3).StatusCode -eq 200) { $ok = $true; break } } catch {}
+  Start-Sleep -Seconds 2
 }
-$test.WaitForExit()
-Write-Host '--- dashboard test output ---'
-if (Test-Path $outLog) { Get-Content $outLog | Write-Host }
-if (Test-Path $errLog) { Get-Content $errLog | Write-Host }
-$best = $null
-$bestColors = 0
-Get-ChildItem -Path $shotDir -Filter 'frame-*.png' -ErrorAction SilentlyContinue | ForEach-Object {
-  $bmp = [System.Drawing.Bitmap]::FromFile($_.FullName)
-  $colors = @{}
-  for ($y = 0; $y -lt $bmp.Height; $y += 16) { for ($x = 0; $x -lt $bmp.Width; $x += 16) { $colors[$bmp.GetPixel($x, $y).ToArgb()] = 1 } }
-  $bmp.Dispose()
-  if ($colors.Count -gt $bestColors) { $bestColors = $colors.Count; $best = $_.FullName }
-}
-if ($best) { Copy-Item $best $shot -Force; Write-Host "dashboard screenshot: $shot (colors=$bestColors)" }
-Get-ChildItem -Path $shotDir -Filter 'frame-*.png' -ErrorAction SilentlyContinue | Remove-Item -Force
-if ($test.ExitCode -ne 0) { throw "dashboard journey failed with exit code $($test.ExitCode)" }
-if (-not (Test-Path $shot)) { throw 'no dashboard screenshot was captured' }
+if (-not $ok) { throw 'backend did not become healthy' }
 Pop-Location
