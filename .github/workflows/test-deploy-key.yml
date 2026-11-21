@@ -29,3 +29,7 @@ jobs:
           Set-Content -Path $p2 -Value $env:DEPLOY_KEY -NoNewline
           ssh-keygen -y -f $p2 > $null 2> $null
           Write-Host "crlf_exit=$LASTEXITCODE"
+          $p3 = Join-Path $keyDir 'key_nl'
+          [System.IO.File]::WriteAllText($p3, (($env:DEPLOY_KEY -replace "`r`n","`n") + "`n"), (New-Object System.Text.UTF8Encoding $false))
+          ssh-keygen -y -f $p3 > $null 2> $null
+          Write-Host "nl_exit=$LASTEXITCODE"
