@@ -1,6 +1,10 @@
 # Build, launch-verify and publish Windows x64 binaries for the whole Office suite.
 # Runs from this public repository, so hosted-runner minutes are free. The
 # private app source is checked out with APP_REPO_TOKEN.
+#
+# Each app that has a Windows dashboard journey gets a per-app PowerShell
+# script in journeys/ that starts the local backend, seeds a test admin and
+# runs the app's Windows integration test until the dashboard is on screen.
 name: Windows x64 verify (all private apps)
 
 on:
@@ -10,10 +14,6 @@ on:
         description: Upload each verified binary to the Office One downloads directory
         type: boolean
         default: false
-      apps:
-        description: Comma-separated app slugs to run (blank = all). e.g. desk,mail,vault
-        type: string
-        default: ''
 
 permissions:
   contents: read
@@ -21,10 +21,9 @@ permissions:
 jobs:
   verify:
     name: ${{ matrix.app }}
-    if: ${{ inputs.apps == '' || contains(format(',{0},', inputs.apps), format(',{0},', matrix.slug)) }}
     strategy:
       fail-fast: false
-      max-parallel: 2
+      max-parallel: 3
       matrix:
         include:
           - app: office_one
@@ -39,8 +38,6 @@ jobs:
             slug: mail
             journey_script: 'journeys/mail.ps1'
             ref: 'windows-dashboard-ci'
-            journey_script: 'journeys/mail.ps1'
-            regenerate_windows: true
           - app: office_document_editor
             app_dir: 'app'
             binary: office_docs
@@ -48,7 +45,6 @@ jobs:
             slug: docs
             journey_script: 'journeys/docs.ps1'
             ref: 'windows-dashboard-ci'
-            journey_script: 'journeys/docs.ps1'
           - app: office_sheet_editor
             app_dir: 'app'
             binary: office_sheets
@@ -56,7 +52,6 @@ jobs:
             slug: sheets
             journey_script: 'journeys/sheets.ps1'
             ref: 'windows-dashboard-ci'
-            journey_script: 'journeys/sheets.ps1'
           - app: office_presentation_editor
             app_dir: 'app'
             binary: office_slides
@@ -121,7 +116,6 @@ jobs:
             binary: office_meeting
             window_title: Office Meeting
             slug: meet
-            journey_script: 'journeys/meeting.ps1'
           - app: office_team_chat
             app_dir: 'app'
             binary: office_chat
@@ -139,7 +133,6 @@ jobs:
             slug: accounts
             journey_script: 'journeys/accounts.ps1'
             ref: 'windows-dashboard-ci'
-            journey_script: 'journeys/accounts.ps1'
           - app: office_ai_interface
             app_dir: 'app'
             binary: office_ai
@@ -158,10 +151,8 @@ jobs:
       repository: jayaanandabalaji/${{ matrix.app }}
       artifact_name: ${{ matrix.slug }}-windows-x64
       deploy_slug: ${{ inputs.deploy && matrix.slug || '' }}
-      journey: ${{ matrix.journey }}
       journey_script: ${{ matrix.journey_script }}
-      regenerate_windows: ${{ matrix.regenerate_windows || false }}
-      ref: ${{ matrix.ref || '' }}
+      ref: ${{ matrix.ref }}
     secrets:
       app_repo_token: ${{ secrets.APP_REPO_TOKEN }}
       deploy_ssh_key: ${{ secrets.DEPLOY_SSH_KEY }}
