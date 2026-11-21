@@ -202,7 +202,14 @@ jobs:
           fi
           chmod +x "$JOURNEY_SCRIPT"
           export LOG="$GITHUB_WORKSPACE/journey.log"
-          "./$JOURNEY_SCRIPT" || status=$?
+          # The journey scripts take the path of their log as the first
+          # argument, and some of them keep their own default.
+          "./$JOURNEY_SCRIPT" "$LOG" || status=$?
+          for candidate in "$LOG" /opt/devfactory/tmp/*/linux-journey.log; do
+            if [ -f "$candidate" ] && [ "$candidate" != "$LOG" ]; then
+              cp "$candidate" "$LOG" || true
+            fi
+          done
           if [ -f "$LOG" ]; then
             tail -n 200 "$LOG" || true
           fi
@@ -223,3 +230,12 @@ jobs:
           name: '${{ inputs.artifact_name }}-screenshot'
           path: ${{ inputs.app_dir == '.' && github.workspace || format('{0}/{1}', github.workspace, inputs.app_dir) }}/verification
           retention-days: 14
+
+      - name: Upload the journey log
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: '${{ inputs.artifact_name }}-journey-log'
+          path: ${{ github.workspace }}/journey.log
+          retention-days: 14
+          if-no-files-found: ignore
