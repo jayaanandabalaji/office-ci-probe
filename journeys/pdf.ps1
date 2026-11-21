@@ -23,8 +23,33 @@ for ($i = 0; $i -lt 60; $i++) {
 if (-not $ok) { throw 'backend did not become healthy' }
 Pop-Location
 Push-Location "$env:GITHUB_WORKSPACE\app"
+$shotDir = Join-Path $env:GITHUB_WORKSPACE 'verification'
+New-Item -ItemType Directory -Force -Path $shotDir | Out-Null
+$shot = Join-Path $shotDir 'dashboard.png'
+$testScript = Join-Path $env:RUNNER_TEMP 'run-dashboard-test.ps1'
+@'
 flutter test -d windows integration_test/dashboard_journey_test.dart `
 --dart-define=API_URL=http://127.0.0.1:8130 `
 --dart-define=TEST_EMAIL=ci-admin@officepdf.test `
 --dart-define=TEST_PASSWORD=a-long-test-password-123
+'@ | Set-Content -Path $testScript -Encoding utf8
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+$test = Start-Process pwsh -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File', $testScript -PassThru -WindowStyle Hidden
+$deadline = (Get-Date).AddMinutes(20)
+while (-not $test.HasExited -and (Get-Date) -lt $deadline) {
+  try {
+    $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+    $m = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+    $g = [System.Drawing.Graphics]::FromImage($m)
+    $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+    $m.Save($shot, [System.Drawing.Imaging.ImageFormat]::Png)
+    $g.Dispose(); $m.Dispose()
+  } catch {}
+  Start-Sleep -Seconds 4
+}
+$test.WaitForExit()
+if ($test.ExitCode -ne 0) { throw "dashboard journey failed with exit code $($test.ExitCode)" }
+if (-not (Test-Path $shot)) { throw 'no dashboard screenshot was captured' }
+Write-Host "dashboard screenshot: $shot"
 Pop-Location

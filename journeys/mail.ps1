@@ -16,10 +16,10 @@ $env:SMTP_PORT = '0'; $env:SUBMISSION_PORT = '0'; $env:SMTPS_PORT = '0'
 $env:IMAP_PORT = '0'; $env:IMAPS_PORT = '0'; $env:POP3_PORT = '0'; $env:POP3S_PORT = '0'; $env:SIEVE_PORT = '0'
 $env:DATA_DIR = Join-Path $env:RUNNER_TEMP 'mail-data'
 $env:ALLOW_INSECURE_AUTH = 'true'
-$env:NODE_ENV = 'development'
 Remove-Item Env:\NODE_ENV -ErrorAction SilentlyContinue
+$env:NODE_ENV = 'development'
 Remove-Item Env:\ACCOUNTS_ISSUER -ErrorAction SilentlyContinue
-Start-Process node -ArgumentList ''dist/index.js'' -WorkingDirectory (Get-Location) -WindowStyle Hidden -PassThru | Out-Null
+Start-Process node -ArgumentList 'dist/index.js' -WorkingDirectory (Get-Location) -WindowStyle Hidden -PassThru | Out-Null
 $ok = $false
 for ($i = 0; $i -lt 60; $i++) {
   try { if ((Invoke-WebRequest 'http://127.0.0.1:18290/api/setup' -UseBasicParsing -TimeoutSec 3).StatusCode -eq 200) { $ok = $true; break } } catch {}
@@ -28,9 +28,34 @@ for ($i = 0; $i -lt 60; $i++) {
 if (-not $ok) { throw 'backend did not become healthy' }
 Pop-Location
 Push-Location "$env:GITHUB_WORKSPACE\app"
+$shotDir = Join-Path $env:GITHUB_WORKSPACE 'verification'
+New-Item -ItemType Directory -Force -Path $shotDir | Out-Null
+$shot = Join-Path $shotDir 'dashboard.png'
+$testScript = Join-Path $env:RUNNER_TEMP 'run-dashboard-test.ps1'
+@'
 flutter test -d windows integration_test/windows_dashboard_test.dart `
 --dart-define=JOURNEY_SERVER_URL=http://127.0.0.1:18290 `
 --dart-define=JOURNEY_ADMIN_EMAIL=admin@journey.test `
 --dart-define=JOURNEY_ADMIN_PASSWORD=JourneyPass123 `
 --dart-define=JOURNEY_ADMIN_NAME='Ada Admin'
+'@ | Set-Content -Path $testScript -Encoding utf8
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+$test = Start-Process pwsh -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File', $testScript -PassThru -WindowStyle Hidden
+$deadline = (Get-Date).AddMinutes(20)
+while (-not $test.HasExited -and (Get-Date) -lt $deadline) {
+  try {
+    $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+    $m = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+    $g = [System.Drawing.Graphics]::FromImage($m)
+    $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+    $m.Save($shot, [System.Drawing.Imaging.ImageFormat]::Png)
+    $g.Dispose(); $m.Dispose()
+  } catch {}
+  Start-Sleep -Seconds 4
+}
+$test.WaitForExit()
+if ($test.ExitCode -ne 0) { throw "dashboard journey failed with exit code $($test.ExitCode)" }
+if (-not (Test-Path $shot)) { throw 'no dashboard screenshot was captured' }
+Write-Host "dashboard screenshot: $shot"
 Pop-Location
