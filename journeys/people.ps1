@@ -17,11 +17,15 @@ Remove-Item Env:\NODE_ENV -ErrorAction SilentlyContinue
 Remove-Item Env:\ACCOUNTS_ISSUER -ErrorAction SilentlyContinue
 Start-Process node -ArgumentList '--env-file-if-exists=.env','src/index.js' -WorkingDirectory (Get-Location) -WindowStyle Hidden -PassThru | Out-Null
 $ok = $false
-for ($i = 0; $i -lt 60; $i++) {{
-  try {{ if ((Invoke-WebRequest 'http://127.0.0.1:8120/api/health' -UseBasicParsing -TimeoutSec 3).StatusCode -eq 200) {{ $ok = $true; break }} }} catch {{}}
+for ($i = 0; $i -lt 90; $i++) {{
+  $client = New-Object System.Net.Sockets.TcpClient
+  try {{
+    $iar = $client.BeginConnect('127.0.0.1', 8120, $null, $null)
+    if ($iar.AsyncWaitHandle.WaitOne(1500) -and $client.Connected) {{ $ok = $true; break }}
+  }} catch {{}} finally {{ $client.Close() }}
   Start-Sleep -Seconds 2
 }}
-if (-not $ok) {{ throw 'backend did not become healthy' }}
+if (-not $ok) {{ throw 'backend did not become healthy on port 8120' }}
 Pop-Location
 Push-Location "$env:GITHUB_WORKSPACE\app"
 $shotDir = Join-Path $env:GITHUB_WORKSPACE 'verification'

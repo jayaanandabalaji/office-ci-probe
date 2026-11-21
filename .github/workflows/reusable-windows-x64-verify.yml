@@ -136,6 +136,16 @@ jobs:
           Push-Location $dir
           flutter build windows --release
           if ($LASTEXITCODE -ne 0) {
+            Write-Host '--- files that include the removed <experimental/coroutine> header ---'
+            $roots = @($dir)
+            if ($env:PUB_CACHE) { $roots += (Join-Path $env:PUB_CACHE 'hosted') }
+            foreach ($r in $roots) {
+              if (Test-Path $r) {
+                Get-ChildItem -Path $r -Recurse -Include *.h,*.hpp,*.cpp,*.cc -ErrorAction SilentlyContinue |
+                  Select-String -Pattern 'experimental/coroutine' -List -ErrorAction SilentlyContinue |
+                  Select-Object -First 8 -ExpandProperty Path
+              }
+            }
             Write-Host 'Build failed. Recreating the Windows runner from the installed Flutter version and retrying once.'
             flutter config --enable-windows-desktop
             Remove-Item -Recurse -Force (Join-Path $dir 'windows') -ErrorAction SilentlyContinue
