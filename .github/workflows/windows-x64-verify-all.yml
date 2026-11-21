@@ -31,6 +31,8 @@ jobs:
             binary: office_one
             window_title: Office One
             slug: one
+            journey_script: 'journeys/one.ps1'
+            ref: 'windows-dashboard-ci'
           - app: office_mail
             app_dir: 'app'
             binary: office_mail
@@ -99,6 +101,8 @@ jobs:
             binary: office_books
             window_title: Office Books
             slug: books
+            journey_script: 'journeys/books.ps1'
+            ref: 'windows-dashboard-ci'
           - app: office_hrms
             app_dir: 'app'
             binary: office_people
@@ -118,16 +122,22 @@ jobs:
             binary: office_meeting
             window_title: Office Meeting
             slug: meet
+            journey_script: 'journeys/meeting.ps1'
+            ref: 'windows-dashboard-ci'
           - app: office_team_chat
             app_dir: 'app'
             binary: office_chat
             window_title: Office Chat
             slug: chat
+            journey_script: 'journeys/chat.ps1'
+            ref: 'windows-dashboard-ci'
           - app: office_analytics
             app_dir: 'app'
             binary: office_analytics
             window_title: Office Analytics
             slug: analytics
+            journey_script: 'journeys/analytics.ps1'
+            ref: 'windows-dashboard-ci'
           - app: office_single_auth
             app_dir: 'app'
             binary: office_accounts
@@ -140,11 +150,15 @@ jobs:
             binary: office_ai
             window_title: Office AI
             slug: ai
+            journey_script: 'journeys/ai.ps1'
+            ref: 'windows-dashboard-ci'
           - app: office_vault
             app_dir: 'app'
             binary: office_vault
             window_title: Office Vault
             slug: vault
+            journey_script: 'journeys/vault.ps1'
+            ref: 'windows-dashboard-ci'
     uses: ./.github/workflows/reusable-windows-x64-verify.yml
     with:
       app_dir: ${{ matrix.app_dir }}
