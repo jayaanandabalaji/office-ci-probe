@@ -43,6 +43,10 @@ on:
         description: PowerShell commands that start the local backend and run the dashboard verification. Empty skips it.
         type: string
         default: ''
+      journey_script:
+        description: Path of a journey script in this CI repo, e.g. journeys/mail.ps1. Empty skips it.
+        type: string
+        default: ''
     secrets:
       app_repo_token:
         description: Token with read access to the private app and its private packages.
@@ -196,7 +200,15 @@ jobs:
 
           if (-not $proc.HasExited) { Stop-Process -Id $proc.Id -Force }
 
-      - name: Dashboard journey verification
+      - name: Check out journey scripts
+        if: ${{ inputs.journey_script != '' }}
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          path: .ci-scripts
+          ref: ${{ github.sha }}
+
+      - name: Dashboard journey verification (inline)
         if: ${{ inputs.journey != '' }}
         shell: pwsh
         env:
@@ -205,6 +217,17 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $script = Join-Path $env:RUNNER_TEMP 'dashboard-journey.ps1'
           [System.IO.File]::WriteAllText($script, $env:JOURNEY_SCRIPT, (New-Object System.Text.UTF8Encoding $false))
+          & $script
+
+      - name: Dashboard journey verification (script file)
+        if: ${{ inputs.journey_script != '' }}
+        shell: pwsh
+        env:
+          JOURNEY_PATH: ${{ inputs.journey_script }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $script = Join-Path $env:GITHUB_WORKSPACE ".ci-scripts/$env:JOURNEY_PATH"
+          if (-not (Test-Path $script)) { throw "Missing journey script: $script" }
           & $script
 
       - name: Package the Windows x64 release

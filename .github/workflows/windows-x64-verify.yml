@@ -36,6 +36,10 @@ on:
         description: PowerShell dashboard-journey commands (blank = build/launch only)
         type: string
         default: ''
+      journey_script:
+        description: Journey script path in the CI repo, e.g. journeys/mail.ps1
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -50,6 +54,8 @@ jobs:
       repository: ${{ inputs.repository }}
       deploy_slug: ${{ inputs.deploy_slug }}
       artifact_name: ${{ inputs.artifact_name }}
+      journey: ${{ inputs.journey }}
+      journey_script: ${{ inputs.journey_script }}
     secrets:
       app_repo_token: ${{ secrets.APP_REPO_TOKEN }}
       deploy_ssh_key: ${{ secrets.DEPLOY_SSH_KEY }}
