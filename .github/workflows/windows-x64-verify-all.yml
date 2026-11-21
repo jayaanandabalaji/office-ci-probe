@@ -32,77 +32,66 @@ jobs:
             window_title: Office One
             slug: one
             journey_script: 'journeys/one.ps1'
-            ref: 'windows-dashboard-ci'
           - app: office_mail
             app_dir: 'app'
             binary: office_mail
             window_title: Office Mail
             slug: mail
             journey_script: 'journeys/mail.ps1'
-            ref: 'windows-dashboard-ci'
           - app: office_document_editor
             app_dir: 'app'
             binary: office_docs
             window_title: Office Docs
             slug: docs
             journey_script: 'journeys/docs.ps1'
-            ref: 'windows-dashboard-ci'
           - app: office_sheet_editor
             app_dir: 'app'
             binary: office_sheets
             window_title: Office Sheets
             slug: sheets
             journey_script: 'journeys/sheets.ps1'
-            ref: 'windows-dashboard-ci'
           - app: office_presentation_editor
             app_dir: 'app'
             binary: office_slides
             window_title: Office Slides
             slug: slides
             journey_script: 'journeys/slides.ps1'
-            ref: 'windows-dashboard-ci'
           - app: office_pdf_editor
             app_dir: 'app'
             binary: office_pdf
             window_title: Office PDF
             slug: pdf
             journey_script: 'journeys/pdf.ps1'
-            ref: 'windows-dashboard-ci'
           - app: office_sign
             app_dir: 'app'
             binary: office_sign
             window_title: Office Sign
             slug: sign
             journey_script: 'journeys/sign.ps1'
-            ref: 'windows-dashboard-ci'
           - app: office_drive
             app_dir: 'app'
             binary: office_drive
             window_title: Office Drive
             slug: drive
             journey_script: 'journeys/drive.ps1'
-            ref: 'windows-dashboard-ci'
           - app: office_crm
             app_dir: 'app'
             binary: office_crm
             window_title: Office CRM
             slug: crm
             journey_script: 'journeys/crm.ps1'
-            ref: 'windows-dashboard-ci'
           - app: office_desk
             app_dir: 'app'
             binary: office_desk
             window_title: Office Desk
             slug: desk
             journey_script: 'journeys/desk.ps1'
-            ref: 'windows-dashboard-ci'
           - app: office_books
             app_dir: 'app'
             binary: office_books
             window_title: Office Books
             slug: books
             journey_script: 'journeys/books.ps1'
-            ref: 'windows-dashboard-ci'
           - app: office_hrms
             runner: 'windows-2022'
             app_dir: 'app'
@@ -110,35 +99,30 @@ jobs:
             window_title: Office People
             slug: people
             journey_script: 'journeys/people.ps1'
-            ref: 'windows-dashboard-ci'
           - app: office_payroll
             app_dir: 'app'
             binary: office_payroll
             window_title: Office Payroll
             slug: payroll
             journey_script: 'journeys/payroll.ps1'
-            ref: 'windows-dashboard-ci'
           - app: office_meeting
             app_dir: 'app'
             binary: office_meeting
             window_title: Office Meeting
             slug: meet
             journey_script: 'journeys/meeting.ps1'
-            ref: 'windows-dashboard-ci'
           - app: office_team_chat
             app_dir: 'app'
             binary: office_chat
             window_title: Office Chat
             slug: chat
             journey_script: 'journeys/chat.ps1'
-            ref: 'windows-dashboard-ci'
           - app: office_analytics
             app_dir: 'app'
             binary: office_analytics
             window_title: Office Analytics
             slug: analytics
             journey_script: 'journeys/analytics.ps1'
-            ref: 'windows-dashboard-ci'
           - app: office_single_auth
             runner: 'windows-2022'
             app_dir: 'app'
@@ -146,21 +130,18 @@ jobs:
             window_title: Office Accounts
             slug: accounts
             journey_script: 'journeys/accounts.ps1'
-            ref: 'windows-dashboard-ci'
           - app: office_ai_interface
             app_dir: 'app'
             binary: office_ai
             window_title: Office AI
             slug: ai
             journey_script: 'journeys/ai.ps1'
-            ref: 'windows-dashboard-ci'
           - app: office_vault
             app_dir: 'app'
             binary: office_vault
             window_title: Office Vault
             slug: vault
             journey_script: 'journeys/vault.ps1'
-            ref: 'windows-dashboard-ci'
     uses: ./.github/workflows/reusable-windows-x64-verify.yml
     with:
       app_dir: ${{ matrix.app_dir }}
