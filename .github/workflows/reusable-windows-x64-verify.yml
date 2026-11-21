@@ -135,6 +135,14 @@ jobs:
           $dir = if ($env:APP_DIR -eq '.') { $env:GITHUB_WORKSPACE } else { Join-Path $env:GITHUB_WORKSPACE $env:APP_DIR }
           Push-Location $dir
           flutter build windows --release
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host 'Build failed. Recreating the Windows runner from the installed Flutter version and retrying once.'
+            flutter config --enable-windows-desktop
+            Remove-Item -Recurse -Force (Join-Path $dir 'windows') -ErrorAction SilentlyContinue
+            flutter create --platforms=windows .
+            flutter build windows --release
+            if ($LASTEXITCODE -ne 0) { throw 'Windows build failed' }
+          }
           Pop-Location
 
       - name: Confirm the executable is a PE x64 binary
