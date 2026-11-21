@@ -37,16 +37,20 @@ jobs:
             binary: office_mail
             window_title: Office Mail
             slug: mail
+            journey_script: 'journeys/mail.ps1'
+            regenerate_windows: true
           - app: office_document_editor
             app_dir: 'app'
             binary: office_docs
             window_title: Office Docs
             slug: docs
+            journey_script: 'journeys/docs.ps1'
           - app: office_sheet_editor
             app_dir: 'app'
             binary: office_sheets
             window_title: Office Sheets
             slug: sheets
+            journey_script: 'journeys/sheets.ps1'
           - app: office_presentation_editor
             app_dir: 'app'
             binary: office_slides
@@ -97,6 +101,7 @@ jobs:
             binary: office_meeting
             window_title: Office Meeting
             slug: meet
+            journey_script: 'journeys/meeting.ps1'
           - app: office_team_chat
             app_dir: 'app'
             binary: office_chat
@@ -112,6 +117,7 @@ jobs:
             binary: office_accounts
             window_title: Office Accounts
             slug: accounts
+            journey_script: 'journeys/accounts.ps1'
           - app: office_ai_interface
             app_dir: 'app'
             binary: office_ai
@@ -131,6 +137,8 @@ jobs:
       artifact_name: ${{ matrix.slug }}-windows-x64
       deploy_slug: ${{ inputs.deploy && matrix.slug || '' }}
       journey: ${{ matrix.journey }}
+      journey_script: ${{ matrix.journey_script }}
+      regenerate_windows: ${{ matrix.regenerate_windows || false }}
     secrets:
       app_repo_token: ${{ secrets.APP_REPO_TOKEN }}
       deploy_ssh_key: ${{ secrets.DEPLOY_SSH_KEY }}
