@@ -111,6 +111,7 @@ jobs:
           $dir = if ($env:APP_DIR -eq '.') { $env:GITHUB_WORKSPACE } else { Join-Path $env:GITHUB_WORKSPACE $env:APP_DIR }
           Push-Location $dir
           flutter config --enable-windows-desktop
+          Remove-Item -Recurse -Force (Join-Path $dir 'windows') -ErrorAction SilentlyContinue
           flutter create --platforms=windows .
           Pop-Location
 
