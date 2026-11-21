@@ -47,6 +47,10 @@ on:
         description: Path of a journey script in this CI repo, e.g. journeys/mail.ps1. Empty skips it.
         type: string
         default: ''
+      regenerate_windows:
+        description: Regenerate the Windows runner with the installed Flutter version (for outdated runner templates).
+        type: boolean
+        default: false
     secrets:
       app_repo_token:
         description: Token with read access to the private app and its private packages.
@@ -64,6 +68,7 @@ on:
       deploy_slug: {type: string, default: ''}
       flutter_version: {type: string, default: '3.44.9'}
       journey: {type: string, default: ''}
+      regenerate_windows: {type: boolean, default: false}
 
 permissions:
   contents: read
@@ -91,6 +96,16 @@ jobs:
           flutter-version: ${{ inputs.flutter_version }}
           channel: stable
           cache: true
+
+      - name: Regenerate the Windows runner when needed
+        if: ${{ inputs.regenerate_windows }}
+        shell: pwsh
+        run: |
+          $dir = if ($env:APP_DIR -eq '.') { $env:GITHUB_WORKSPACE } else { Join-Path $env:GITHUB_WORKSPACE $env:APP_DIR }
+          Push-Location $dir
+          flutter config --enable-windows-desktop
+          flutter create --platforms=windows .
+          Pop-Location
 
       - name: Authorise git for the private package repositories
         shell: pwsh

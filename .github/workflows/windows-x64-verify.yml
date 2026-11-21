@@ -40,6 +40,10 @@ on:
         description: Journey script path in the CI repo, e.g. journeys/mail.ps1
         type: string
         default: ''
+      regenerate_windows:
+        description: Regenerate the Windows runner with the installed Flutter version
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -56,6 +60,7 @@ jobs:
       artifact_name: ${{ inputs.artifact_name }}
       journey: ${{ inputs.journey }}
       journey_script: ${{ inputs.journey_script }}
+      regenerate_windows: ${{ inputs.regenerate_windows }}
     secrets:
       app_repo_token: ${{ secrets.APP_REPO_TOKEN }}
       deploy_ssh_key: ${{ secrets.DEPLOY_SSH_KEY }}
