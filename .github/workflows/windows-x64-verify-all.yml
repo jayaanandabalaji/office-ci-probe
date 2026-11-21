@@ -71,6 +71,8 @@ jobs:
             binary: office_sign
             window_title: Office Sign
             slug: sign
+            journey_script: 'journeys/sign.ps1'
+            ref: 'windows-dashboard-ci'
           - app: office_drive
             app_dir: 'app'
             binary: office_drive
