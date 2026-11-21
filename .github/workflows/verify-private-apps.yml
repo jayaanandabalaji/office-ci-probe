@@ -55,6 +55,7 @@ jobs:
             app_dir: 'app'
             binary: office_drive
             window_title: Office Drive
+            journey_script: 'app/integration_test/run-linux-journey.sh'
           - app: office_crm
             app_dir: 'app'
             binary: office_crm
@@ -105,6 +106,7 @@ jobs:
       binary: ${{ matrix.binary }}
       window_title: ${{ matrix.window_title }}
       artifact_name: ${{ matrix.app }}-linux-x64
+      journey_script: ${{ matrix.journey_script }}
       repository: jayaanandabalaji/${{ matrix.app }}
     secrets:
       app_repo_token: ${{ secrets.APP_REPO_TOKEN }}

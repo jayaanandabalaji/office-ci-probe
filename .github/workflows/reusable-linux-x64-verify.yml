@@ -31,6 +31,10 @@ on:
         description: Repository to check out; empty means the caller.
         type: string
         default: ''
+      journey_script:
+        description: Path of the app's own Linux desktop journey script.
+        type: string
+        default: ''
     secrets:
       app_repo_token:
         description: Token with access to the app and to the private packages.
@@ -42,6 +46,7 @@ on:
       window_title: {type: string, default: 'ci_probe'}
       artifact_name: {type: string, default: 'ci-probe-linux-x64'}
       repository: {type: string, default: ''}
+      journey_script: {type: string, default: ''}
 
 permissions:
   contents: read
@@ -175,6 +180,28 @@ jobs:
             exit 1
           fi
           kill "$app_pid" 2>/dev/null || true
+
+      - name: Run the app's own Linux desktop journey
+        if: ${{ inputs.journey_script != '' }}
+        working-directory: ${{ github.workspace }}
+        env:
+          JOURNEY_SCRIPT: '${{ inputs.journey_script }}'
+        run: |
+          set -euo pipefail
+          # The journey starts its own screen, bus, database and server, and
+          # signs in with a real account, so the desktop path is proved and not
+          # only its first screen.
+          sudo apt-get install -y --no-install-recommends \
+            xdg-desktop-portal xdg-desktop-portal-gtk || true
+          sudo systemctl start postgresql || true
+          sudo -u postgres psql -tc \
+            "SELECT 1 FROM pg_roles WHERE rolname='$(whoami)'" | grep -q 1 \
+            || sudo -u postgres psql -c "CREATE ROLE $(whoami) SUPERUSER LOGIN;"
+          if [ -f server/package.json ]; then
+            ( cd server && ( npm ci --no-audit --no-fund || npm install --no-audit --no-fund ) )
+          fi
+          chmod +x "$JOURNEY_SCRIPT"
+          "./$JOURNEY_SCRIPT"
 
       - name: Upload the x86_64 bundle
         uses: actions/upload-artifact@v4
