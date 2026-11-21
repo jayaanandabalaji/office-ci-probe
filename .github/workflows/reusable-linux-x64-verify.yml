@@ -35,6 +35,10 @@ on:
         description: Path of the app's own Linux desktop journey script.
         type: string
         default: ''
+      journey_prepare:
+        description: Shell run before the journey, to prepare what it expects.
+        type: string
+        default: ''
     secrets:
       app_repo_token:
         description: Token with access to the app and to the private packages.
@@ -47,6 +51,7 @@ on:
       artifact_name: {type: string, default: 'ci-probe-linux-x64'}
       repository: {type: string, default: ''}
       journey_script: {type: string, default: ''}
+      journey_prepare: {type: string, default: ''}
 
 permissions:
   contents: read
@@ -186,6 +191,7 @@ jobs:
         working-directory: ${{ github.workspace }}
         env:
           JOURNEY_SCRIPT: '${{ inputs.journey_script }}'
+          JOURNEY_PREPARE: '${{ inputs.journey_prepare }}'
         run: |
           set -euo pipefail
           # The journey starts its own screen, bus, database and server, and
@@ -205,10 +211,13 @@ jobs:
             ( cd server && ( npm ci --no-audit --no-fund || npm install --no-audit --no-fund ) )
           fi
           chmod +x "$JOURNEY_SCRIPT"
-          # The journey writes its evidence under the path the suite uses on
-          # the build machine, so that directory has to exist here as well.
+          # The journey writes its evidence under the paths the suite uses on
+          # the build machine, so those directories have to exist here as well.
           sudo mkdir -p /opt/devfactory/tmp
           sudo chown -R "$(whoami)" /opt/devfactory/tmp
+          if [ -n "$JOURNEY_PREPARE" ]; then
+            eval "$JOURNEY_PREPARE"
+          fi
           export LOG="$GITHUB_WORKSPACE/journey.log"
           # The journey scripts take the path of their log as the first
           # argument, and some of them keep their own default.
