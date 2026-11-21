@@ -32,6 +32,10 @@ on:
         description: Artifact name
         type: string
         default: 'desk-windows-x64'
+      journey:
+        description: PowerShell dashboard-journey commands (blank = build/launch only)
+        type: string
+        default: ''
 
 permissions:
   contents: read

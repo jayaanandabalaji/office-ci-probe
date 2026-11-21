@@ -130,6 +130,7 @@ jobs:
       repository: jayaanandabalaji/${{ matrix.app }}
       artifact_name: ${{ matrix.slug }}-windows-x64
       deploy_slug: ${{ inputs.deploy && matrix.slug || '' }}
+      journey: ${{ matrix.journey }}
     secrets:
       app_repo_token: ${{ secrets.APP_REPO_TOKEN }}
       deploy_ssh_key: ${{ secrets.DEPLOY_SSH_KEY }}

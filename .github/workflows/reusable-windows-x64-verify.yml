@@ -39,6 +39,10 @@ on:
         description: Flutter SDK version.
         type: string
         default: '3.44.9'
+      journey:
+        description: PowerShell commands that start the local backend and run the dashboard verification. Empty skips it.
+        type: string
+        default: ''
     secrets:
       app_repo_token:
         description: Token with read access to the private app and its private packages.
@@ -55,6 +59,7 @@ on:
       repository: {type: string, default: ''}
       deploy_slug: {type: string, default: ''}
       flutter_version: {type: string, default: '3.44.9'}
+      journey: {type: string, default: ''}
 
 permissions:
   contents: read
@@ -190,6 +195,17 @@ jobs:
           if ($colors.Count -lt 20) { throw "The window rendered a blank screen." }
 
           if (-not $proc.HasExited) { Stop-Process -Id $proc.Id -Force }
+
+      - name: Dashboard journey verification
+        if: ${{ inputs.journey != '' }}
+        shell: pwsh
+        env:
+          JOURNEY_SCRIPT: ${{ inputs.journey }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $script = Join-Path $env:RUNNER_TEMP 'dashboard-journey.ps1'
+          [System.IO.File]::WriteAllText($script, $env:JOURNEY_SCRIPT, (New-Object System.Text.UTF8Encoding $false))
+          & $script
 
       - name: Package the Windows x64 release
         shell: pwsh
