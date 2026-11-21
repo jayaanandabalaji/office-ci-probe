@@ -21,6 +21,7 @@ permissions:
 jobs:
   verify:
     name: ${{ matrix.app }}
+    if: ${{ inputs.apps == '' || contains(format(',{0},', inputs.apps), format(',{0},', matrix.slug)) }}
     strategy:
       fail-fast: false
       max-parallel: 2
