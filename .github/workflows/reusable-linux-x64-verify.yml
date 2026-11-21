@@ -65,7 +65,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.repository != '' && inputs.repository || github.repository }}
-          token: ${{ secrets.app_repo_token != '' && secrets.app_repo_token || github.token }}
+          token: ${{ secrets.app_repo_token != '' && secrets.app_repo_token || secrets.APP_REPO_TOKEN != '' && secrets.APP_REPO_TOKEN || github.token }}
 
       - name: Install Flutter
         uses: subosito/flutter-action@v2
@@ -98,7 +98,7 @@ jobs:
 
       - name: Authorise git for the private package repositories
         env:
-          PACKAGE_TOKEN: ${{ secrets.app_repo_token != '' && secrets.app_repo_token || secrets.GITHUB_TOKEN }}
+          PACKAGE_TOKEN: ${{ secrets.app_repo_token != '' && secrets.app_repo_token || secrets.APP_REPO_TOKEN != '' && secrets.APP_REPO_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           # The apps depend on private packages that are fetched by URL, so the
@@ -201,9 +201,15 @@ jobs:
             ( cd server && ( npm ci --no-audit --no-fund || npm install --no-audit --no-fund ) )
           fi
           chmod +x "$JOURNEY_SCRIPT"
-          "./$JOURNEY_SCRIPT"
+          export LOG="$GITHUB_WORKSPACE/journey.log"
+          "./$JOURNEY_SCRIPT" || status=$?
+          if [ -f "$LOG" ]; then
+            tail -n 200 "$LOG" || true
+          fi
+          exit "${status:-0}"
 
       - name: Upload the x86_64 bundle
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: '${{ inputs.artifact_name }}'
