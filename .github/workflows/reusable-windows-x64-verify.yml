@@ -1,0 +1,238 @@
+# Reusable workflow: build and verify a Flutter app's Windows x64 release.
+#
+# Runs from the public office-linux-x64-ci repository so hosted-runner minutes
+# are free. The app source is private and is checked out with APP_REPO_TOKEN.
+#
+# Verification goes beyond a successful build: it launches the real .exe on the
+# Windows runner, waits for a window to map, captures the screen, and fails if
+# the window never appears or renders a blank frame.
+name: Windows x64 build and verification
+
+on:
+  workflow_call:
+    inputs:
+      app_dir:
+        description: Directory that holds pubspec.yaml ('.' or 'app').
+        type: string
+        required: true
+      binary:
+        description: Name of the exe inside build/windows/x64/runner/Release (without .exe).
+        type: string
+        required: true
+      window_title:
+        description: Expected window title. Empty means any visible window from the app process.
+        type: string
+        default: ''
+      artifact_name:
+        description: Name of the uploaded build artifact.
+        type: string
+        default: 'windows-x64'
+      repository:
+        description: Private app repository to check out; empty means the caller.
+        type: string
+        default: ''
+      deploy_slug:
+        description: If set, upload <slug>-windows-x64.zip to the Office One downloads directory.
+        type: string
+        default: ''
+      flutter_version:
+        description: Flutter SDK version.
+        type: string
+        default: '3.44.9'
+    secrets:
+      app_repo_token:
+        description: Token with read access to the private app and its private packages.
+        required: false
+      deploy_ssh_key:
+        description: SSH private key for the binary download host.
+        required: false
+  workflow_dispatch:
+    inputs:
+      app_dir: {type: string, default: 'app'}
+      binary: {type: string, default: 'office_desk'}
+      window_title: {type: string, default: 'Office Desk'}
+      artifact_name: {type: string, default: 'windows-x64'}
+      repository: {type: string, default: ''}
+      deploy_slug: {type: string, default: ''}
+      flutter_version: {type: string, default: '3.44.9'}
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Build and launch on Windows x64
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      APP_DIR: '${{ inputs.app_dir }}'
+      BINARY: '${{ inputs.binary }}'
+      WINDOW_TITLE: '${{ inputs.window_title }}'
+    steps:
+      - name: Check out the app
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repository != '' && inputs.repository || github.repository }}
+          token: ${{ secrets.app_repo_token != '' && secrets.app_repo_token || github.token }}
+          persist-credentials: true
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ inputs.flutter_version }}
+          channel: stable
+          cache: true
+
+      - name: Authorise git for the private package repositories
+        shell: pwsh
+        env:
+          PACKAGE_TOKEN: ${{ secrets.app_repo_token != '' && secrets.app_repo_token || github.token }}
+        run: |
+          git config --global url."https://x-access-token:${env:PACKAGE_TOKEN}@github.com/".insteadOf "https://github.com/"
+
+      - name: Fetch the packages
+        shell: pwsh
+        run: |
+          $dir = if ($env:APP_DIR -eq '.') { $env:GITHUB_WORKSPACE } else { Join-Path $env:GITHUB_WORKSPACE $env:APP_DIR }
+          Push-Location $dir
+          flutter pub get
+          Pop-Location
+
+      - name: Build the Windows x64 release
+        shell: pwsh
+        run: |
+          $dir = if ($env:APP_DIR -eq '.') { $env:GITHUB_WORKSPACE } else { Join-Path $env:GITHUB_WORKSPACE $env:APP_DIR }
+          Push-Location $dir
+          flutter build windows --release
+          Pop-Location
+
+      - name: Confirm the executable is a PE x64 binary
+        shell: pwsh
+        run: |
+          $dir = if ($env:APP_DIR -eq '.') { $env:GITHUB_WORKSPACE } else { Join-Path $env:GITHUB_WORKSPACE $env:APP_DIR }
+          $exe = Join-Path $dir "build/windows/x64/runner/Release/$($env:BINARY).exe"
+          if (-not (Test-Path $exe)) { throw "Missing Windows executable: $exe" }
+          $bytes = [System.IO.File]::ReadAllBytes($exe)
+          if ($bytes[0] -ne 0x4D -or $bytes[1] -ne 0x5A) { throw "Not a PE executable" }
+          $peOffset = [BitConverter]::ToInt32($bytes, 0x3C)
+          $machine = [BitConverter]::ToUInt16($bytes, $peOffset + 4)
+          "PE machine=0x{0:X4}" -f $machine | Tee-Object -FilePath pe-type.txt
+          if ($machine -ne 0x8664) { throw "Executable is not x64 (machine=0x{0:X4})" -f $machine }
+
+      - name: Launch the app, verify a window, and capture the screen
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dir = if ($env:APP_DIR -eq '.') { $env:GITHUB_WORKSPACE } else { Join-Path $env:GITHUB_WORKSPACE $env:APP_DIR }
+          $release = Join-Path $dir 'build/windows/x64/runner/Release'
+          $exe = Join-Path $release "$($env:BINARY).exe"
+          New-Item -ItemType Directory -Force -Path verification | Out-Null
+
+          Add-Type @"
+          using System;
+          using System.Text;
+          using System.Runtime.InteropServices;
+          public static class Win {
+            public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+            [DllImport("user32.dll")] public static extern bool EnumWindows(EnumWindowsProc cb, IntPtr lParam);
+            [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hWnd);
+            [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
+            [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int max);
+            [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetClassName(IntPtr hWnd, StringBuilder text, int max);
+          }
+          "@
+
+          $proc = Start-Process -FilePath $exe -WorkingDirectory $release -PassThru
+          $deadline = (Get-Date).AddSeconds(120)
+          $found = $false
+          $windowTitle = ''
+          $class = ''
+          while ((Get-Date) -lt $deadline) {
+            if ($proc.HasExited) { throw "App exited before drawing a window (code $($proc.ExitCode)). Check the log." }
+            [Win]::EnumWindows({ param($h, $l)
+              if (-not [Win]::IsWindowVisible($h)) { return $true }
+              [uint32]$wpid = 0
+              [void][Win]::GetWindowThreadProcessId($h, [ref]$wpid)
+              if ($wpid -ne $proc.Id) { return $true }
+              $sb = New-Object System.Text.StringBuilder 512
+              [void][Win]::GetWindowText($h, $sb, 512)
+              $t = $sb.ToString()
+              $cb = New-Object System.Text.StringBuilder 256
+              [void][Win]::GetClassName($h, $cb, 256)
+              if ($env:WINDOW_TITLE -and $t -notlike "*$($env:WINDOW_TITLE)*") { return $true }
+              if ([string]::IsNullOrWhiteSpace($t) -and $cb.ToString() -notlike '*Flutter*') { return $true }
+              $script:found = $true
+              $script:windowTitle = $t
+              $script:class = $cb.ToString()
+              return $false
+            }, [IntPtr]::Zero) | Out-Null
+            if ($found) { break }
+            Start-Sleep -Seconds 2
+          }
+          if (-not $found) { throw "No application window appeared within 120 seconds." }
+          "window title='$windowTitle' class='$class'" | Tee-Object -FilePath verification/window.txt
+          Start-Sleep -Seconds 5
+
+          Add-Type -AssemblyName System.Windows.Forms
+          Add-Type -AssemblyName System.Drawing
+          $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $bmp = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
+          $g = [System.Drawing.Graphics]::FromImage($bmp)
+          $g.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+          $png = Join-Path $env:GITHUB_WORKSPACE 'verification/windows-x64.png'
+          $bmp.Save($png, [System.Drawing.Imaging.ImageFormat]::Png)
+          $colors = @{}
+          for ($y = 0; $y -lt $bmp.Height; $y += 12) {
+            for ($x = 0; $x -lt $bmp.Width; $x += 12) { $colors[$bmp.GetPixel($x, $y).ToArgb()] = 1 }
+          }
+          $g.Dispose(); $bmp.Dispose()
+          "colors=$($colors.Count)" | Tee-Object -FilePath verification/image-stats.txt
+          if ($colors.Count -lt 20) { throw "The window rendered a blank screen." }
+
+          if (-not $proc.HasExited) { Stop-Process -Id $proc.Id -Force }
+
+      - name: Package the Windows x64 release
+        shell: pwsh
+        run: |
+          $dir = if ($env:APP_DIR -eq '.') { $env:GITHUB_WORKSPACE } else { Join-Path $env:GITHUB_WORKSPACE $env:APP_DIR }
+          $release = Join-Path $dir 'build/windows/x64/runner/Release'
+          Compress-Archive -Path (Join-Path $release '*') -DestinationPath "$($env:ARTIFACT_NAME).zip" -Force
+          Get-Item "$($env:ARTIFACT_NAME).zip" | Select-Object Name, Length | Format-Table
+        env:
+          ARTIFACT_NAME: '${{ inputs.artifact_name }}'
+
+      - name: Upload the Windows x64 binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: ${{ inputs.artifact_name }}.zip
+          retention-days: 14
+
+      - name: Upload the verification evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ inputs.artifact_name }}-evidence
+          path: verification
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Deploy the binary to the Office One downloads directory
+        if: ${{ inputs.deploy_slug != '' && secrets.deploy_ssh_key != '' }}
+        shell: pwsh
+        env:
+          DEPLOY_KEY: ${{ secrets.deploy_ssh_key }}
+          DEPLOY_SLUG: '${{ inputs.deploy_slug }}'
+          ARTIFACT_NAME: '${{ inputs.artifact_name }}'
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $keyDir = Join-Path $env:USERPROFILE '.ssh'
+          New-Item -ItemType Directory -Force -Path $keyDir | Out-Null
+          $keyPath = Join-Path $keyDir 'id_rsa'
+          Set-Content -Path $keyPath -Value $env:DEPLOY_KEY -NoNewline
+          icacls $keyPath /inheritance:r /grant:r "$($env:USERNAME):(F)" | Out-Null
+          $zip = "$($env:GITHUB_WORKSPACE)/$($env:ARTIFACT_NAME).zip"
+          $target = "ubuntu@129.225.120.99:/opt/office-downloads/$($env:DEPLOY_SLUG)-windows-x64.zip"
+          scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=NUL -i $keyPath $zip $target
+          if ($LASTEXITCODE -ne 0) { throw "Deployment failed" }
+          "Deployed https://one.129-225-120-99.sslip.io/downloads/$($env:DEPLOY_SLUG)-windows-x64.zip"

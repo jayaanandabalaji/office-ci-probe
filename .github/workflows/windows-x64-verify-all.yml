@@ -1,0 +1,134 @@
+# Build, launch-verify and publish Windows x64 binaries for the whole Office suite.
+# Runs from this public repository, so hosted-runner minutes are free. The
+# private app source is checked out with APP_REPO_TOKEN.
+name: Windows x64 verify (all private apps)
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Upload each verified binary to the Office One downloads directory
+        type: boolean
+        default: false
+      apps:
+        description: Comma-separated app slugs to run (blank = all). e.g. desk,mail,vault
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: ${{ matrix.app }}
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - app: office_one
+            app_dir: '.'
+            binary: office_one
+            window_title: Office One
+            slug: one
+          - app: office_mail
+            app_dir: 'app'
+            binary: office_mail
+            window_title: Office Mail
+            slug: mail
+          - app: office_document_editor
+            app_dir: 'app'
+            binary: office_docs
+            window_title: Office Docs
+            slug: docs
+          - app: office_sheet_editor
+            app_dir: 'app'
+            binary: office_sheets
+            window_title: Office Sheets
+            slug: sheets
+          - app: office_presentation_editor
+            app_dir: 'app'
+            binary: office_slides
+            window_title: Office Slides
+            slug: slides
+          - app: office_pdf_editor
+            app_dir: 'app'
+            binary: office_pdf
+            window_title: Office PDF
+            slug: pdf
+          - app: office_sign
+            app_dir: 'app'
+            binary: office_sign
+            window_title: Office Sign
+            slug: sign
+          - app: office_drive
+            app_dir: 'app'
+            binary: office_drive
+            window_title: Office Drive
+            slug: drive
+          - app: office_crm
+            app_dir: 'app'
+            binary: office_crm
+            window_title: Office CRM
+            slug: crm
+          - app: office_desk
+            app_dir: 'app'
+            binary: office_desk
+            window_title: Office Desk
+            slug: desk
+          - app: office_books
+            app_dir: 'app'
+            binary: office_books
+            window_title: Office Books
+            slug: books
+          - app: office_hrms
+            app_dir: 'app'
+            binary: office_people
+            window_title: Office People
+            slug: people
+          - app: office_payroll
+            app_dir: 'app'
+            binary: office_payroll
+            window_title: Office Payroll
+            slug: payroll
+          - app: office_meeting
+            app_dir: 'app'
+            binary: office_meeting
+            window_title: Office Meeting
+            slug: meet
+          - app: office_team_chat
+            app_dir: 'app'
+            binary: office_chat
+            window_title: Office Chat
+            slug: chat
+          - app: office_analytics
+            app_dir: 'app'
+            binary: office_analytics
+            window_title: Office Analytics
+            slug: analytics
+          - app: office_single_auth
+            app_dir: 'app'
+            binary: office_accounts
+            window_title: Office Accounts
+            slug: accounts
+          - app: office_ai_interface
+            app_dir: 'app'
+            binary: office_ai
+            window_title: Office AI
+            slug: ai
+          - app: office_vault
+            app_dir: 'app'
+            binary: office_vault
+            window_title: Office Vault
+            slug: vault
+    uses: ./.github/workflows/reusable-windows-x64-verify.yml
+    with:
+      app_dir: ${{ matrix.app_dir }}
+      binary: ${{ matrix.binary }}
+      window_title: ${{ matrix.window_title }}
+      repository: jayaanandabalaji/${{ matrix.app }}
+      artifact_name: ${{ matrix.slug }}-windows-x64
+      deploy_slug: ${{ inputs.deploy && matrix.slug || '' }}
+    secrets:
+      app_repo_token: ${{ secrets.APP_REPO_TOKEN }}
+      deploy_ssh_key: ${{ secrets.DEPLOY_SSH_KEY }}

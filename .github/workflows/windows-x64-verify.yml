@@ -1,0 +1,51 @@
+# Run a single app's Windows x64 build + launch verification.
+# Public repository, so hosted-runner minutes are free.
+name: Windows x64 verify (single app)
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_dir:
+        description: Directory holding pubspec.yaml ('.' or 'app')
+        type: string
+        default: 'app'
+        required: true
+      binary:
+        description: Exe name in build/windows/x64/runner/Release, without .exe
+        type: string
+        default: 'office_desk'
+        required: true
+      window_title:
+        description: Expected window title (blank = any visible app window)
+        type: string
+        default: 'Office Desk'
+      repository:
+        description: Private app repo, e.g. jayaanandabalaji/office_desk
+        type: string
+        default: 'jayaanandabalaji/office_desk'
+        required: true
+      deploy_slug:
+        description: Download slug. Blank = do not deploy the binary.
+        type: string
+        default: 'desk'
+      artifact_name:
+        description: Artifact name
+        type: string
+        default: 'desk-windows-x64'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    uses: ./.github/workflows/reusable-windows-x64-verify.yml
+    with:
+      app_dir: ${{ inputs.app_dir }}
+      binary: ${{ inputs.binary }}
+      window_title: ${{ inputs.window_title }}
+      repository: ${{ inputs.repository }}
+      deploy_slug: ${{ inputs.deploy_slug }}
+      artifact_name: ${{ inputs.artifact_name }}
+    secrets:
+      app_repo_token: ${{ secrets.APP_REPO_TOKEN }}
+      deploy_ssh_key: ${{ secrets.DEPLOY_SSH_KEY }}
