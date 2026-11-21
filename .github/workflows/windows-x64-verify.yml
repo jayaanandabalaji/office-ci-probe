@@ -44,6 +44,10 @@ on:
         description: Regenerate the Windows runner with the installed Flutter version
         type: boolean
         default: false
+      ref:
+        description: Branch of the app repo to build (empty = default branch)
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -61,6 +65,7 @@ jobs:
       journey: ${{ inputs.journey }}
       journey_script: ${{ inputs.journey_script }}
       regenerate_windows: ${{ inputs.regenerate_windows }}
+      ref: ${{ inputs.ref }}
     secrets:
       app_repo_token: ${{ secrets.APP_REPO_TOKEN }}
       deploy_ssh_key: ${{ secrets.DEPLOY_SSH_KEY }}

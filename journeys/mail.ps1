@@ -1,44 +1,36 @@
 $ErrorActionPreference = 'Stop'
-
-# Office Mail: start local Postgres + backend, then run the integration test
-# that walks first-run setup, signs in, and reaches Inbox (the dashboard).
-Set-Service -Name postgresql-x64-17 -StartupType Manual
-Start-Service -Name postgresql-x64-17
+$svc = Get-Service | Where-Object Name -like 'postgresql-x64-*' | Select-Object -First 1
+Set-Service $svc.Name -StartupType Manual
+Start-Service $svc.Name
+$bin = $env:PGBIN
+if (-not $bin) { $v = $svc.Name -replace 'postgresql-x64-', ''; $bin = "C:\Program Files\PostgreSQL\$v\bin" }
 $env:PGPASSWORD = 'root'
-& "$env:PGBIN\createdb.exe" -h 127.0.0.1 -U postgres -p 5432 office_mail_desktop 2>$null
-
+& "$bin\createdb.exe" -h 127.0.0.1 -U postgres office_mail_desktop 2>$null
 Push-Location "$env:GITHUB_WORKSPACE\server"
 npm ci
 npm run build
 $env:DATABASE_URL = 'postgresql://postgres:root@127.0.0.1:5432/office_mail_desktop'
 $env:MAIL_HOSTNAME = 'mx.journey.test'
 $env:HTTP_PORT = '18290'
-$env:SMTP_PORT = '0'
-$env:SUBMISSION_PORT = '0'
-$env:SMTPS_PORT = '0'
-$env:IMAP_PORT = '0'
-$env:IMAPS_PORT = '0'
-$env:POP3_PORT = '0'
-$env:POP3S_PORT = '0'
-$env:SIEVE_PORT = '0'
+$env:SMTP_PORT = '0'; $env:SUBMISSION_PORT = '0'; $env:SMTPS_PORT = '0'
+$env:IMAP_PORT = '0'; $env:IMAPS_PORT = '0'; $env:POP3_PORT = '0'; $env:POP3S_PORT = '0'; $env:SIEVE_PORT = '0'
 $env:DATA_DIR = Join-Path $env:RUNNER_TEMP 'mail-data'
 $env:ALLOW_INSECURE_AUTH = 'true'
 $env:NODE_ENV = 'development'
+Remove-Item Env:\NODE_ENV -ErrorAction SilentlyContinue
 Remove-Item Env:\ACCOUNTS_ISSUER -ErrorAction SilentlyContinue
-Start-Process node -ArgumentList 'dist/index.js' -WorkingDirectory (Get-Location) `
-  -RedirectStandardOutput (Join-Path $env:RUNNER_TEMP 'mail-server.out.log') `
-  -RedirectStandardError (Join-Path $env:RUNNER_TEMP 'mail-server.err.log') `
-  -WindowStyle Hidden -PassThru | Out-Null
+Start-Process node -ArgumentList ''dist/index.js'' -WorkingDirectory (Get-Location) -WindowStyle Hidden -PassThru | Out-Null
 $ok = $false
 for ($i = 0; $i -lt 60; $i++) {
-  try { if ((Invoke-WebRequest 'http://127.0.0.1:18290/api/setup' -UseBasicParsing).StatusCode -eq 200) { $ok = $true; break } } catch {}
+  try { if ((Invoke-WebRequest 'http://127.0.0.1:18290/api/setup' -UseBasicParsing -TimeoutSec 3).StatusCode -eq 200) { $ok = $true; break } } catch {}
   Start-Sleep -Seconds 2
 }
-if (-not $ok) { Get-Content (Join-Path $env:RUNNER_TEMP 'mail-server.err.log') -Tail 30; throw 'Mail backend did not become ready' }
+if (-not $ok) { throw 'backend did not become healthy' }
 Pop-Location
-
 Push-Location "$env:GITHUB_WORKSPACE\app"
-flutter test integration_test/journey_test.dart -d windows `
-  --dart-define=OFFICE_ANALYTICS_APP_KEY=test `
-  --dart-define=OFFICE_APP_VERSION=1.0.0
+flutter test -d windows integration_test/windows_dashboard_test.dart `
+--dart-define=JOURNEY_SERVER_URL=http://127.0.0.1:18290 `
+--dart-define=JOURNEY_ADMIN_EMAIL=admin@journey.test `
+--dart-define=JOURNEY_ADMIN_PASSWORD=JourneyPass123 `
+--dart-define=JOURNEY_ADMIN_NAME='Ada Admin'
 Pop-Location

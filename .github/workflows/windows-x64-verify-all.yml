@@ -38,6 +38,8 @@ jobs:
             window_title: Office Mail
             slug: mail
             journey_script: 'journeys/mail.ps1'
+            ref: 'windows-dashboard-ci'
+            journey_script: 'journeys/mail.ps1'
             regenerate_windows: true
           - app: office_document_editor
             app_dir: 'app'
@@ -45,22 +47,30 @@ jobs:
             window_title: Office Docs
             slug: docs
             journey_script: 'journeys/docs.ps1'
+            ref: 'windows-dashboard-ci'
+            journey_script: 'journeys/docs.ps1'
           - app: office_sheet_editor
             app_dir: 'app'
             binary: office_sheets
             window_title: Office Sheets
             slug: sheets
             journey_script: 'journeys/sheets.ps1'
+            ref: 'windows-dashboard-ci'
+            journey_script: 'journeys/sheets.ps1'
           - app: office_presentation_editor
             app_dir: 'app'
             binary: office_slides
             window_title: Office Slides
             slug: slides
+            journey_script: 'journeys/slides.ps1'
+            ref: 'windows-dashboard-ci'
           - app: office_pdf_editor
             app_dir: 'app'
             binary: office_pdf
             window_title: Office PDF
             slug: pdf
+            journey_script: 'journeys/pdf.ps1'
+            ref: 'windows-dashboard-ci'
           - app: office_sign
             app_dir: 'app'
             binary: office_sign
@@ -71,16 +81,22 @@ jobs:
             binary: office_drive
             window_title: Office Drive
             slug: drive
+            journey_script: 'journeys/drive.ps1'
+            ref: 'windows-dashboard-ci'
           - app: office_crm
             app_dir: 'app'
             binary: office_crm
             window_title: Office CRM
             slug: crm
+            journey_script: 'journeys/crm.ps1'
+            ref: 'windows-dashboard-ci'
           - app: office_desk
             app_dir: 'app'
             binary: office_desk
             window_title: Office Desk
             slug: desk
+            journey_script: 'journeys/desk.ps1'
+            ref: 'windows-dashboard-ci'
           - app: office_books
             app_dir: 'app'
             binary: office_books
@@ -91,11 +107,15 @@ jobs:
             binary: office_people
             window_title: Office People
             slug: people
+            journey_script: 'journeys/people.ps1'
+            ref: 'windows-dashboard-ci'
           - app: office_payroll
             app_dir: 'app'
             binary: office_payroll
             window_title: Office Payroll
             slug: payroll
+            journey_script: 'journeys/payroll.ps1'
+            ref: 'windows-dashboard-ci'
           - app: office_meeting
             app_dir: 'app'
             binary: office_meeting
@@ -118,6 +138,8 @@ jobs:
             window_title: Office Accounts
             slug: accounts
             journey_script: 'journeys/accounts.ps1'
+            ref: 'windows-dashboard-ci'
+            journey_script: 'journeys/accounts.ps1'
           - app: office_ai_interface
             app_dir: 'app'
             binary: office_ai
@@ -139,6 +161,7 @@ jobs:
       journey: ${{ matrix.journey }}
       journey_script: ${{ matrix.journey_script }}
       regenerate_windows: ${{ matrix.regenerate_windows || false }}
+      ref: ${{ matrix.ref || '' }}
     secrets:
       app_repo_token: ${{ secrets.APP_REPO_TOKEN }}
       deploy_ssh_key: ${{ secrets.DEPLOY_SSH_KEY }}

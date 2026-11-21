@@ -51,6 +51,10 @@ on:
         description: Regenerate the Windows runner with the installed Flutter version (for outdated runner templates).
         type: boolean
         default: false
+      ref:
+        description: Branch of the app repository to check out. Empty means the default branch.
+        type: string
+        default: ''
     secrets:
       app_repo_token:
         description: Token with read access to the private app and its private packages.
@@ -69,6 +73,7 @@ on:
       flutter_version: {type: string, default: '3.44.9'}
       journey: {type: string, default: ''}
       regenerate_windows: {type: boolean, default: false}
+      ref: {type: string, default: ''}
 
 permissions:
   contents: read
@@ -89,6 +94,7 @@ jobs:
           repository: ${{ inputs.repository != '' && inputs.repository || github.repository }}
           token: ${{ secrets.app_repo_token != '' && secrets.app_repo_token || github.token }}
           persist-credentials: false
+          ref: ${{ inputs.ref }}
 
       - name: Install Flutter
         uses: subosito/flutter-action@v2
