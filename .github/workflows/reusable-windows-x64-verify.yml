@@ -233,7 +233,8 @@ jobs:
           $keyDir = Join-Path $env:USERPROFILE '.ssh'
           New-Item -ItemType Directory -Force -Path $keyDir | Out-Null
           $keyPath = Join-Path $keyDir 'id_rsa'
-          Set-Content -Path $keyPath -Value $env:DEPLOY_KEY -NoNewline
+          $keyText = $env:DEPLOY_KEY -replace "`r`n", "`n"
+          [System.IO.File]::WriteAllText($keyPath, $keyText, (New-Object System.Text.UTF8Encoding $false))
           icacls $keyPath /inheritance:r /grant:r "$($env:USERNAME):(F)" | Out-Null
           $zip = "$($env:GITHUB_WORKSPACE)/$($env:ARTIFACT_NAME).zip"
           $target = "ubuntu@129.225.120.99:/opt/office-downloads/$($env:DEPLOY_SLUG)-windows-x64.zip"
